@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kiks AI</title>
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --panel: #12121a;
+            --accent: #8b5cf6;
+            --accent-hover: #7c3aed;
+            --text: #e2e8f0;
+            --text-muted: #64748b;
+            --border: #1e1e2d;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Шапка */
+        header {
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(18, 18, 26, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            z-index: 10;
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            background: linear-gradient(90deg, #8b5cf6, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            color: transparent;
+            background-size: 200% auto;
+            animation: gradient 3s linear infinite;
+        }
+
+        @keyframes gradient { to { background-position: 200% center; } }
+
+        .clear-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .clear-btn:hover { background: rgba(255,255,255,0.05); color: #ef4444; border-color: #ef4444; }
+
+        /* Область чата */
+        #chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            scroll-behavior: smooth;
+        }
+
+        /* Кастомный скроллбар */
+        #chat::-webkit-scrollbar { width: 6px; }
+        #chat::-webkit-scrollbar-track { background: transparent; }
+        #chat::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        #chat::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+        /* Сообщения */
+        .msg {
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 85%;
+            line-height: 1.5;
+            font-size: 15px;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            opacity: 0;
+            transform: translateY(15px);
+            position: relative;
+        }
+
+        @keyframes slideUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .msg.user {
+            background: var(--accent);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2);
+        }
+
+        .msg.bot {
+            background: var(--panel);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        .msg.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            color: #fca5a5;
+        }
+
+        /* Курсор при печати */
+        .cursor::after {
+            content: '▋';
+            display: inline-block;
+            animation: blink 1s step-start infinite;
+            color: var(--accent);
+            margin-left: 2px;
+        }
+
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* Поле ввода */
+        .input-area {
+            padding: 15px;
+            background: var(--bg);
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            padding-bottom: max(15px, env(safe-area-inset-bottom));
+        }
+
+        input {
+            flex: 1;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px 16px;
+            color: white;
+            font-size: 16px;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.15);
+        }
+
+        button.send {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: 0.2s;
+            flex-shrink: 0;
+        }
+
+        button.send svg { width: 20px; height: 20px; fill: currentColor; margin-left: -2px; }
+        button.send:hover { background: var(--accent-hover); transform: scale(1.05); }
+        button.send:active { transform: scale(0.95); }
+        button.send:disabled { background: var(--border); cursor: not-allowed; transform: none; color: var(--text-muted); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">Kiks AI</div>
+        <button class="clear-btn" onclick="clearChat()">Очистить</button>
+    </header>
+
+    <div id="chat"></div>
+
+    <div class="input-area">
+        <input type="text" id="textInput" placeholder="Напиши сообщение..." autocomplete="off">
+        <button class="send" id="sendBtn" onclick="sendMessage()">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+    </div>
+
+    <script>
+        const API_KEY = "kl_live_Njhg8tFv4PztDOEeJNuOUP5n4mvkm_zH"; // Твой ключ
+        const API_URL = "https://api.klinch.cloud/v1/chat/completions";
+        const MODEL = "gpt-6.1-sol";
+
+        const chatContainer = document.getElementById('chat');
+        const input = document.getElementById('textInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        // Загружаем историю из памяти или создаем новую
+        let history = JSON.parse(localStorage.getItem('kiks_history')) || [];
+        
+        // Приветствие, если история пуста
+        if (history.length === 0) {
+            history.push({ role: "assistant", content: "Привет! Я Kiks AI. Чем могу помочь?" });
+            saveHistory();
+        }
+
+        // Отрисовка начальной истории
+        renderHistory();
+
+        function renderHistory() {
+            chatContainer.innerHTML = '';
+            history.forEach(msg => {
+                appendMessageUI(msg.content, msg.role === 'user' ? 'user' : 'bot');
+            });
+            scrollToBottom();
+        }
+
+        function saveHistory() {
+            localStorage.setItem('kiks_history', JSON.stringify(history));
+        }
+
+        function appendMessageUI(text, role) {
+            const div = document.createElement('div');
+            div.className = `msg ${role}`;
+            div.textContent = text;
+            chatContainer.appendChild(div);
+            scrollToBottom();
+            return div;
+        }
+
+        function scrollToBottom() {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // Красивая печать текста (Typewriter effect)
+        async function typeWriter(element, text, speed = 15) {
+            element.classList.add('cursor');
+            element.textContent = '';
+            for (let i = 0; i < text.length; i++) {
+                element.textContent += text.charAt(i);
+                scrollToBottom();
+                await new Promise(resolve => setTimeout(resolve, speed));
+            }
+            element.classList.remove('cursor');
+        }
+
+        async function sendMessage() {
+            const text = input.value.trim();
+            if (!text) return;
+
+            // 1. Добавляем сообщение пользователя
+            input.value = '';
+            history.push({ role: "user", content: text });
+            saveHistory();
+            appendMessageUI(text, 'user');
+
+            // 2. Блокируем кнопку
+            sendBtn.disabled = true;
+            input.disabled = true;
+
+            // 3. Добавляем временное сообщение "Печатает..."
+            const botDiv = appendMessageUI('Печатает...', 'bot');
+            botDiv.style.opacity = '0.7';
+
+            try {
+                // 4. Отправляем запрос
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: MODEL,
+                        messages: history.map(m => ({ role: m.role, content: m.content }))
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    const botText = data.choices[0].message.content;
+                    
+                    // 5. Сохраняем ответ в историю
+                    history.push({ role: "assistant", content: botText });
+                    saveHistory();
+
+                    // 6. Запускаем анимацию печати
+                    botDiv.style.opacity = '1';
+                    await typeWriter(botDiv, botText);
+                } else {
+                    throw new Error(data.error?.message || "Ошибка API. Проверь ключ или баланс.");
+                }
+            } catch (error) {
+                botDiv.style.opacity = '1';
+                botDiv.classList.add('error');
+                botDiv.textContent = "⚠️ " + error.message;
+            } finally {
+                // 7. Разблокируем интерфейс
+                sendBtn.disabled = false;
+                input.disabled = false;
+                input.focus();
+            }
+        }
+
+        function clearChat() {
+            if(confirm('Точно удалить всю историю чата?')) {
+                history = [{ role: "assistant", content: "Привет! Я Kiks AI. Чем могу помочь?" }];
+                saveHistory();
+                renderHistory();
+            }
+        }
+
+        // Отправка по Enter
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.isComposing) sendMessage();
+        });
+    </script>
+</body>
+</html>
